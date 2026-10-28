@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src 'self'">
+    <title>Pick a colour</title>
+    <style>
+      /* the screen colour picker (main.js pickColour): the screen as it was,
+         a magnifier at the mouse with the hex of the pixel under it. a click
+         takes that colour; Esc or a right click lets it be. */
+      @font-face { font-family: "DigitalDelivery"; font-weight: 700; src: url("fonts/CCDigitalDelivery-Bold.otf") format("opentype"); }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; cursor: crosshair; user-select: none; }
+      #screen { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+      #loupe {
+        position: fixed;
+        width: 132px;
+        height: 132px;
+        border: 3px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 0 1px #000, 0 6px 18px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+        pointer-events: none;
+        image-rendering: pixelated;
+      }
+      #loupe canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+      #loupe::after {
+        content: "";
+        position: absolute;
+        left: 60px;
+        top: 60px;
+        width: 12px;
+        height: 12px;
+        box-sizing: border-box;
+        border: 2px solid #fff;
+        outline: 1px solid #000;
+      }
+      #label {
+        position: fixed;
+        padding: 3px 10px 4px;
+        border-radius: 999px;
+        font: 700 13px "DigitalDelivery", system-ui, sans-serif;
+        color: #fff;
+        background: rgba(18, 0, 31, 0.92);
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      #label i { display: inline-block; width: 11px; height: 11px; margin-right: 6px; border: 1px solid #fff; vertical-align: -1px; }
+      #hint {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 7px 18px 8px;
+        border-radius: 999px;
+        font: 700 14px "DigitalDelivery", system-ui, sans-serif;
+        color: #fff;
+        background: rgba(18, 0, 31, 0.92);
+        border: 1px solid #9d00ff;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="screen"></canvas>
+    <div id="hint">Click anywhere to take its colour · Esc to stop</div>
+    <div id="loupe" hidden><canvas id="zoom" width="11" height="11"></canvas></div>
+    <div id="label" hidden><i></i><span></span></div>
+    <script>
+      "use strict";
+      const $ = id => document.getElementById(id);
+      const ZOOM = 11; // pixels across the magnifier
+      let pixels = null; // the screen as it was, at its own pixels
+      let scale = 1; // screen pixels to a CSS pixel
+
+      const colourAt = (x, y) => {
+        const px = Math.min(pixels.width - 1, Math.max(0, Math.floor(x * scale)));
+        const py = Math.min(pixels.height - 1, Math.max(0, Math.floor(y * scale)));
+        const at = (py * pixels.width + px) * 4;
+        return "#" + [0, 1, 2].map(i => pixels.data[at + i].toString(16).padStart(2, "0")).join("").toUpperCase();
+      };
+
+      const show = (x, y) => {
+        if (!pixels) {
+          return;
+        }
+        const zoom = $("zoom").getContext("2d");
+        const px = Math.floor(x * scale), py = Math.floor(y * scale);
+        zoom.clearRect(0, 0, ZOOM, ZOOM);
+        zoom.drawImage($("screen"), px - (ZOOM >> 1), py - (ZOOM >> 1), ZOOM, ZOOM, 0, 0, ZOOM, ZOOM);
+        const colour = colourAt(x, y);
+        const right = x + 160 < innerWidth, below = y + 190 < innerHeight;
+        $("loupe").hidden = false;
+        $("loupe").style.left = `${right ? x + 18 : x - 150}px`;
+        $("loupe").style.top = `${below ? y + 18 : y - 190}px`;
+        $("label").hidden = false;
+        $("label").style.left = `${right ? x + 30 : x - 138}px`;
+        $("label").style.top = `${below ? y + 158 : y - 50}px`;
+        $("label").querySelector("i").style.background = colour;
+        $("label").querySelector("span").textContent = colour;
+      };
+
+      window.addEventListener("mousemove", event => show(event.clientX, event.clientY));
+      window.addEventListener("mousedown", event => {
+        if (!pixels) {
+          return;
+        }
+        window.picker.done(event.button === 0 ? colourAt(event.clientX, event.clientY) : "");
+      });
+      window.addEventListener("contextmenu", event => event.preventDefault());
+      window.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+          window.picker.done("");
+        }
+      });
+
+      (async () => {
+        const url = await window.picker.screen();
+        if (!url) {
+          window.picker.ready(false);
+          return;
+        }
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        const canvas = $("screen");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const draw = canvas.getContext("2d");
+        draw.drawImage(image, 0, 0);
+        pixels = draw.getImageData(0, 0, canvas.width, canvas.height);
+        scale = canvas.width / innerWidth;
+        // a screen not shown to us (Wayland's, to an X11 app) comes back
+        // black: not a picture to pick from
+        const data = pixels.data;
+        const step = Math.max(4, Math.floor(data.length / 4 / 20000) * 4);
+        let lit = false;
+        for (let i = 0; i < data.length && !lit; i += step) {
+          lit = data[i] !== 0 || data[i + 1] !== 0 || data[i + 2] !== 0;
+        }
+        window.picker.ready(lit);
+      })();
+    </script>
+  </body>
+</html>

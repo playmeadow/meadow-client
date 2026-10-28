@@ -1,0 +1,17 @@
+/electron/
+/electron-win/
+/dist/
+/tools/bin/
+/installer/node_modules/
+
+*.md
+
+*.pem
+*.key
+*.p12
+.env
+*.env
+secrets*
+id_*
+node_modules/
+test/

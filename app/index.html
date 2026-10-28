@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Meadow</title>
+    <style>
+      @font-face { font-family: "DigitalDelivery"; font-weight: 400; src: url("fonts/CCDigitalDelivery-Regular.otf") format("opentype"); }
+      @font-face { font-family: "DigitalDelivery"; font-weight: 700; src: url("fonts/CCDigitalDelivery-Bold.otf") format("opentype"); }
+      /* Meadow's titles. Dimbo has one weight. */
+      @font-face { font-family: "Dimbo"; src: url("fonts/Dimbo-Regular.ttf") format("truetype"); }
+      :root {
+        --bg: #12001f;
+        --panel: #1d0833;
+        --raised: #2b0e4b;
+        --line: #3e1a66;
+        --line-hover: #6a2fa8;
+        --text: #fff;
+        --muted: #b7a0d4;
+        --faint: #6f5a8c;
+        --accent: #9d00ff;
+        --accent-hover: #b33cff;
+        --accent-dim: #4a1a78;
+        --dots: rgba(157, 0, 255, 0.32);
+        --shade: rgba(18, 0, 31, 0.88);
+        --title: "Dimbo", "DigitalDelivery", system-ui, sans-serif;
+        --bar-height: 30px;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.35 "DigitalDelivery", system-ui, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      [hidden] { display: none !important; }
+      ::selection { background: var(--accent); color: var(--text); }
+      ::-webkit-scrollbar { width: 10px; }
+      ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; border: 3px solid var(--bg); }
+
+      #login {
+        height: 100%;
+        overflow-y: overlay; /* the scrollbar lies over the page: nothing shifts when one appears */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 7vh 16px 28px;
+        background:
+          radial-gradient(circle, var(--dots) 1.5px, transparent 2px) 0 0 / 22px 22px,
+          radial-gradient(ellipse 70% 55% at 50% 0%, rgba(157, 0, 255, 0.28), transparent 70%),
+          var(--bg);
+        background-attachment: local;
+      }
+      #card { width: 100%; max-width: 340px; }
+      h1 {
+        margin: 0;
+        font-family: var(--title);
+        font-size: 44px;
+        font-weight: 400;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        text-align: center;
+        text-shadow: 0 3px 0 var(--accent), 0 0 24px rgba(157, 0, 255, 0.55);
+      }
+      #logo { display: block; height: 128px; margin: 0 auto 6px; filter: drop-shadow(0 6px 18px rgba(157, 0, 255, 0.45)); }
+      #subtitle { margin: 8px 0 0; text-align: center; color: var(--muted); font-size: 14px; }
+      #update-line { margin: 12px 0 0; text-align: center; }
+      #update-button { font-family: inherit; cursor: pointer; }
+
+      /* the server: its address and state in words, then numbers if it gives any. */
+      #server-state { margin: 18px 0 24px; }
+      #server-line { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; font-size: 13px; color: var(--muted); }
+      .badge {
+        padding: 1px 9px 2px;
+        border: 1px solid var(--text);
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text);
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .badge.off { color: var(--muted); background: none; border-color: var(--line); border-style: dashed; }
+      .badge.wait { color: var(--muted); background: none; border-color: var(--line); }
+      #server-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin: 6px 0 0;
+        padding: 6px 0 0;
+        text-align: center;
+      }
+      #server-stats div + div { border-left: 1px solid var(--line); }
+      #server-stats dd { margin: 0; font-size: 21px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+      #server-stats dt { margin-top: 1px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+      #tabs { display: flex; margin: 0 0 18px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--shade); }
+      #tabs button { flex: 1; padding: 6px 0 7px; border: 0; background: none; color: var(--muted); }
+      #tabs button:hover { color: var(--text); background: none; }
+      #tabs button[aria-selected="true"] { color: var(--text); background: var(--accent); }
+
+      label { display: block; margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+      input[type="text"], input[type="password"], input[type="number"], select {
+        display: block;
+        width: 100%;
+        margin-top: 5px;
+        padding: 9px 14px 10px;
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        font: inherit;
+        -webkit-appearance: none;
+        transition: border-color 0.12s;
+      }
+      select {
+        padding-right: 34px;
+        background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+        background-position: calc(100% - 19px) 55%, calc(100% - 14px) 55%;
+        background-size: 5px 5px;
+        background-repeat: no-repeat;
+      }
+      input::placeholder { color: var(--faint); }
+      input:hover, select:hover { border-color: var(--line-hover); }
+      input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(157, 0, 255, 0.25); }
+      ::-webkit-scrollbar { display: none; }
+      :focus { outline: none; }
+      input:disabled, select:disabled { opacity: 0.4; }
+      input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+      label.check { display: flex; align-items: center; gap: 9px; color: var(--text); font-size: 14px; cursor: pointer; }
+      label.check.agree { align-items: flex-start; font-size: 12px; line-height: 1.4; }
+      label.check.agree input { margin-top: 1px; }
+      input[type="checkbox"] {
+        -webkit-appearance: none;
+        flex: none;
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        border: 1px solid var(--line-hover);
+        border-radius: 6px;
+        background: var(--panel);
+        cursor: pointer;
+      }
+      input[type="checkbox"]:hover { border-color: var(--accent-hover); }
+      input[type="checkbox"]:checked {
+        border-color: var(--accent);
+        background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M4.5 9.5l3 3 6-7' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat;
+      }
+      input[type="checkbox"]:disabled { opacity: 0.4; cursor: default; }
+      button {
+        font: inherit;
+        color: var(--text);
+        background: none;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 7px 16px 8px;
+        cursor: pointer;
+        transition: background 0.12s, border-color 0.12s, color 0.12s;
+      }
+      button:hover { background: var(--raised); border-color: var(--line-hover); }
+      button:disabled { opacity: 0.45; cursor: default; }
+      button.main {
+        width: 100%;
+        margin-top: 6px;
+        padding: 10px 16px 11px;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        background: var(--accent);
+        border-color: var(--accent);
+        box-shadow: 0 4px 0 #5c0096;
+      }
+      button.main:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+      button.main:active { transform: translateY(2px); box-shadow: 0 2px 0 #5c0096; }
+      button.main:disabled, button.main:disabled:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: var(--muted); box-shadow: none; transform: none; }
+      /* what went wrong is said in white on a line of its own, marked; never by colour. */
+      .status { min-height: 20px; margin: 12px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+      .status.bad { color: var(--text); }
+      .status.bad::before { content: "!"; display: inline-block; width: 17px; height: 17px; margin-right: 7px; border-radius: 50%; background: var(--accent); color: var(--text); font-weight: 700; line-height: 17px; }
+      details { margin-top: 26px; border-top: 1px dashed var(--line-hover); padding-top: 14px; }
+      summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-bottom: 14px; user-select: none; }
+      summary:hover { color: var(--text); }
+      .hint { margin: -4px 0 14px; font-size: 12px; color: var(--muted); }
+      .links { margin: 14px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+      a { color: inherit; text-underline-offset: 3px; }
+      a:hover { color: var(--text); }
+
+      #ban-popup, #rename-popup, #link-popup { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--shade); }
+      #rename-box, #link-box { width: 100%; max-width: 400px; padding: 28px 28px 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; }
+      #rename-box h2, #link-box h2 { margin: 0 0 16px; font-family: var(--title); font-size: 28px; font-weight: 400; }
+      #rename-box .buttons, #link-box .buttons { display: flex; gap: 10px; margin-top: 6px; }
+      #rename-box .buttons button, #link-box .buttons button { flex: 1; margin: 0; padding: 10px 16px 11px; font-size: 16px; }
+      #ban-box { width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; padding: 30px 30px 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; }
+      #ban-head { display: flex; align-items: center; gap: 14px; }
+      #ban-head img { flex: none; width: 48px; height: 48px; }
+      #ban-head h2 { margin: 0; font-family: var(--title); font-size: 30px; font-weight: 400; line-height: 1.15; }
+      #ban-who { margin: 10px 0 0; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+      #ban-who b { color: var(--text); }
+      #ban-facts { margin: 20px 0 0; border: 1px solid var(--line); border-radius: 16px; background: var(--bg); }
+      #ban-facts div { padding: 16px 18px 17px; border-top: 1px solid var(--line); }
+      /* with no reason there is one row, and it stands without a frame. */
+      #ban-facts.bare { border: 0; background: none; }
+      #ban-facts.bare div { padding: 0; border-top: 0; }
+      #ban-facts div:first-child { border-top: 0; }
+      #ban-facts dt { margin: 0 0 2px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+      #ban-facts dd { margin: 0; font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+      #ban-box p.line { margin: 16px 0 0; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+      #ban-box p.line a { color: var(--text); }
+      #ban-buttons { display: flex; gap: 10px; margin-top: 22px; }
+      #ban-buttons button { flex: 1; margin: 0; padding: 10px 16px 11px; font-size: 16px; }
+
+      #saved { margin: 0 0 16px; padding: 0; list-style: none; }
+      #saved li, #link-accounts li { display: flex; gap: 6px; margin: 0 0 6px; }
+      #link-accounts { margin: 0 0 16px; padding: 0; list-style: none; }
+      #saved .account, #link-accounts .account {
+        flex: 1;
+        background: var(--shade);
+        min-width: 0;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 9px 16px 10px;
+        text-align: left;
+        font-weight: 700;
+      }
+      #saved .account::after, #link-accounts .account::after { content: "→"; margin-left: auto; color: var(--muted); font-weight: 400; }
+      #saved .account:hover, #link-accounts .account:hover { background: var(--accent); border-color: var(--accent); color: var(--text); }
+      #saved .account:hover::after, #saved .account:hover .where { color: var(--text); }
+      #saved .name, #link-accounts .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      #saved .where { font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
+      #saved .forget { flex: none; width: 40px; padding: 0; border-color: transparent; color: var(--muted); font-size: 18px; }
+      #saved .forget:hover { color: var(--text); border-color: var(--line); }
+
+      #animals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 14px; }
+      #animals button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        padding: 10px 2px 8px;
+        border-radius: 18px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      #animals img { width: 60px; height: 60px; filter: grayscale(1); opacity: 0.6; transition: filter 0.15s, opacity 0.15s; }
+      #animals button:hover img, #animals button[aria-checked="true"] img { filter: none; opacity: 1; }
+      #animals button[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); color: var(--text); background: var(--panel); }
+      #picked { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+      #picked img { width: 44px; height: 44px; }
+      #picked button { margin-left: auto; padding: 3px 12px 4px; font-size: 12px; }
+
+      #game { height: 100%; display: flex; flex-direction: column; }
+      #bar {
+        flex: 0 0 var(--bar-height);
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0 6px 0 12px;
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+        border-bottom: 1px solid var(--line);
+      }
+      #who { color: var(--text); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+      #glance { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 12px; overflow: hidden; }
+      #glance .badge { font-size: 10px; }
+      #note { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+      #note a { cursor: pointer; text-decoration: underline; }
+      #bar button { border: 0; padding: 3px 10px 4px; font-size: 13px; color: var(--muted); }
+      #bar button:hover { color: var(--text); background: var(--raised); }
+      #bar button[aria-pressed="true"], #bar button[aria-expanded="true"] { color: var(--text); background: var(--accent); }
+      #bar #bar-update { color: var(--text); background: var(--accent); font-weight: 700; }
+      body.fullscreen { --bar-height: 0px; }
+      body.fullscreen #bar, body.fullscreen #stats { display: none; }
+      #stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; background: var(--bg); min-height: 0; }
+      /* the game is 900 x 550; keep that shape whatever the window's is. */
+      webview {
+        width: min(100vw, calc((100vh - var(--bar-height)) * 900 / 550));
+        height: min(calc(100vh - var(--bar-height)), calc(100vw * 550 / 900));
+      }
+      /* the theatre's browser, over the theatre screen (theatreBrowser below) */
+      #theatre-browser-view {
+        position: absolute;
+        z-index: 1;
+        background: #fff;
+      }
+      #loading {
+        position: absolute;
+        top: 0; right: 0; bottom: 0; left: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background: var(--bg);
+        color: var(--muted);
+        font-size: 14px;
+      }
+      #loading::before {
+        content: "";
+        width: 26px;
+        height: 26px;
+        border: 2px solid var(--line);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        #loading::before { animation: none; }
+        * { transition: none !important; }
+      }
+      #stats {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 290px;
+        padding: 14px 16px;
+        background: rgba(18, 0, 31, 0.95);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        font-size: 14px;
+      }
+      #stats h2 { margin: 12px 0 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+      #stats h2:first-child { margin-top: 0; }
+      #stats dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; margin: 0; }
+      #stats dt { color: var(--muted); white-space: nowrap; }
+      #stats dd { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+      #stats p { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main id="login">
+      <div id="card">
+        <img id="logo" src="meadow-logo.png" alt="">
+        <h1>Meadow</h1>
+        <p id="subtitle">not affiliated with WildWorks or Animal Jam</p>
+        <p id="update-line" hidden><button type="button" id="update-button" class="badge"></button></p>
+        <div id="server-state" role="status">
+          <p id="server-line"><span id="server-text"></span><span id="server-badge" class="badge off" hidden>Offline</span></p>
+          <dl id="server-stats" hidden>
+            <div><dd id="server-online">–</dd><dt>Playing</dt></div>
+            <div><dd id="server-ping">–</dd><dt>Ping</dt></div>
+            <div><dd id="server-uptime">–</dd><dt>Uptime</dt></div>
+          </dl>
+        </div>
+
+        <div id="tabs" role="tablist">
+          <button type="button" role="tab" id="tab-login" aria-selected="true" aria-controls="login-form">Log in</button>
+          <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="signup-form">Create account</button>
+        </div>
+
+        <form id="login-form" autocomplete="off" role="tabpanel" aria-labelledby="tab-login">
+          <ul id="saved" aria-label="Remembered accounts"></ul>
+          <label>Username
+            <input id="username" type="text" maxlength="100" spellcheck="false" autofocus>
+          </label>
+          <label>Password
+            <input id="password" type="password" maxlength="100">
+          </label>
+          <div id="code-part" hidden>
+            <label>2FA code
+              <input id="totp" type="text" inputmode="numeric" maxlength="20" spellcheck="false">
+            </label>
+            <label class="check"><input id="remember-device" type="checkbox"> Trust this device for 30 days</label>
+          </div>
+          <label class="check"><input id="remember" type="checkbox"> Remember me</label>
+          <button id="log-in" class="main" type="submit">Log in</button>
+          <p id="status" class="status" role="status"></p>
+          <p class="links"><a href="#" id="manage-account">Manage Account</a> &middot; <a href="#" id="commands-login">Custom Commands</a></p>
+          <p class="links"><a href="#" id="terms-login">Terms</a> &middot; <a href="#" id="privacy-login">Privacy</a></p>
+        </form>
+
+        <form id="signup-form" autocomplete="off" role="tabpanel" aria-labelledby="tab-signup" hidden>
+          <div id="step-animal">
+            <div id="animals" role="radiogroup" aria-label="Your first animal"></div>
+            <button id="signup-next" class="main" type="button" disabled>Next</button>
+          </div>
+          <div id="step-account" hidden>
+            <p id="picked"><img id="picked-art" alt=""><span id="picked-name"></span><button id="signup-back" type="button">Change</button></p>
+            <label>Username
+              <input id="new-username" type="text" maxlength="20" spellcheck="false">
+            </label>
+            <label>Password
+              <input id="new-password" type="password" maxlength="100">
+            </label>
+            <label>Password again
+              <input id="new-confirm" type="password" maxlength="100">
+            </label>
+            <label class="check"><input id="new-remember" type="checkbox"> Remember me</label>
+            <label class="check agree"><input id="new-agreed" type="checkbox">
+              <span>I am 18 or older, and old enough in my country to agree to this myself. I agree to the <a href="#" id="terms-signup">Terms of Service</a> and the <a href="#" id="privacy-signup">Privacy Policy</a>.</span></label>
+            <button id="sign-up" class="main" type="submit">Create account</button>
+          </div>
+          <p id="signup-status" class="status" role="status"></p>
+        </form>
+
+        <details id="advanced">
+          <summary>Advanced</summary>
+          <label>Server
+            <input id="server" type="text" spellcheck="false">
+          </label>
+          <p class="hint" id="choices-hint" hidden></p>
+          <label>Account type
+            <select id="account-type" data-choice>
+              <option value="">Server default</option>
+              <option value="0">Non-member</option>
+              <option value="2">Member</option>
+              <option value="4">Developer</option>
+            </select>
+          </label>
+          <label class="check"><input id="guide" type="checkbox" data-choice> Guide</label>
+          <label>Starting room
+            <input id="starting-room" type="text" spellcheck="false" placeholder="jamaa_township.room_main">
+          </label>
+          <label class="check"><input id="start-in-den" type="checkbox" checked> Start in den</label>
+          <label class="check"><input id="start-muted" type="checkbox"> Start muted</label>
+          <label class="check"><input id="use-gpu" type="checkbox"> Use GPU</label>
+          <p class="hint" id="gpu-hint" style="margin-top: -6px" hidden>Applies after restart.</p>
+          <label class="check"><input id="allow-unencrypted" type="checkbox"> Allow unencrypted</label>
+          <label class="check" id="auto-update-part" hidden><input id="auto-update" type="checkbox"> Automatic updates</label>
+          <p class="hint" id="version-hint"></p>
+          <button type="button" id="show-log">Show client log</button>
+          <p class="hint">Attach client.log to a bug report.</p>
+        </details>
+      </div>
+    </main>
+
+    <div id="ban-popup" role="alertdialog" aria-modal="true" aria-labelledby="ban-title" hidden>
+      <div id="ban-box">
+        <div id="ban-head">
+          <img src="ban-icon.png" alt="">
+          <div>
+            <h2 id="ban-title"></h2>
+            <p id="ban-who"><b id="ban-name"></b><span id="ban-address"></span></p>
+          </div>
+        </div>
+        <dl id="ban-facts">
+          <div id="ban-reason-part"><dt>Reason</dt><dd id="ban-reason"></dd></div>
+          <div><dt>Until</dt><dd id="ban-until"></dd></div>
+        </dl>
+        <p class="line">Appeal or delete your account at <a href="#" class="ban-site"></a></p>
+        <div id="ban-buttons">
+          <button id="ban-manage" type="button">Manage Account</button>
+          <button id="ban-ok" class="main" type="button">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="rename-popup" role="dialog" aria-modal="true" aria-labelledby="rename-title" hidden>
+      <form id="rename-box" autocomplete="off">
+        <h2 id="rename-title">Username rejected</h2>
+        <label>New username
+          <input id="rename-name" type="text" maxlength="20" spellcheck="false">
+        </label>
+        <div class="buttons">
+          <button id="rename-cancel" type="button">Cancel</button>
+          <button id="rename-save" class="main" type="submit">Save</button>
+        </div>
+        <p id="rename-status" class="status" role="status"></p>
+      </form>
+    </div>
+
+    <div id="link-popup" role="dialog" aria-modal="true" aria-labelledby="link-title" hidden>
+      <div id="link-box">
+        <h2 id="link-title">Sign in to the account page as</h2>
+        <ul id="link-accounts"></ul>
+        <div class="buttons">
+          <button id="link-cancel" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="game" hidden>
+      <div id="bar">
+        <span id="who"></span>
+        <button id="bar-update" type="button" hidden></button>
+        <span id="glance"><span id="glance-badge" class="badge off" hidden>Offline</span><span id="glance-text"></span><span id="fps" title="Pictures the game drew in the last second"></span><span id="note" role="status"></span></span>
+        <button id="stats-toggle" type="button" aria-expanded="false" aria-controls="stats">Stats</button>
+        <button id="mute" type="button" aria-pressed="false" title="F7">Mute</button>
+        <button id="hud" type="button" aria-pressed="false">HUD</button>
+        <button id="screenshot" type="button" title="F10">Screenshot</button>
+        <button id="room-picture" type="button" title="The whole room, without the HUD">Room picture</button>
+        <button id="reload" type="button">Reload</button>
+        <button id="account" type="button">Manage Account</button>
+        <button id="fullscreen" type="button" title="F11">Fullscreen</button>
+        <button id="log-out" type="button">Log out</button>
+      </div>
+      <div id="stage">
+        <div id="loading">Loading the game…</div>
+        <div id="stats" hidden>
+          <h2>Server</h2>
+          <dl>
+            <dt>Answer time</dt><dd id="stat-ping">–</dd>
+            <dt>Playing now</dt><dd id="stat-online">–</dd>
+            <dt>Uptime</dt><dd id="stat-uptime">–</dd>
+          </dl>
+          <h2>This session</h2>
+          <dl>
+            <dt>Played for</dt><dd id="stat-session">–</dd>
+            <dt>Painted</dt><dd id="stat-painted">–</dd>
+            <dt>Game processor</dt><dd id="stat-game-cpu">–</dd>
+            <dt>Game memory</dt><dd id="stat-game-memory">–</dd>
+            <dt>Client memory</dt><dd id="stat-rest-memory">–</dd>
+            <dt>Total memory</dt><dd id="stat-memory">–</dd>
+            <dt>Processes</dt><dd id="stat-processes">–</dd>
+          </dl>
+          <p id="stats-tip"></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+
+      const $ = id => document.getElementById(id);
+      const SAVED_FIELDS = ["server", "account-type", "guide", "starting-room", "start-in-den", "start-muted", "allow-unencrypted"];
+      const SETTINGS_KEY = "advanced";
+      // "Remember me": the server's sign-in token for each remembered account,
+      // never a password. [{server, username, token}]
+      const REMEMBERED_KEY = "remembered";
+      // two-step sign-in: what the server gave this computer for an account
+      // that asked not to be asked for its code for 30 days.
+      // [{server, username, token}]
+      const DEVICES_KEY = "devices";
+      // the animals the server lets a new account start as, in the order the
+      // official sign-up page shows them; their pictures are the server's.
+      const ANIMALS = [
+        [4, "wolf", "Wolf"], [13, "rhino", "Rhino"], [8, "bunny", "Bunny"],
+        [1, "tiger", "Tiger"], [18, "seal", "Seal"], [5, "koala", "Koala"],
+        [6, "panda", "Panda"], [24, "penguin", "Penguin"], [7, "monkey", "Monkey"],
+      ];
+      const SIGNUP_MESSAGES = {
+        invalid_username: "Usernames are 3 to 20 letters, digits, spaces, dots or dashes, with at least three letters.",
+        username_taken: "That username is already taken.",
+        name_not_allowed: "That username is not allowed.",
+        invalid_password: "Passwords need 10 characters or more, with a capital letter, a small letter and a digit.",
+        weak_password: "That password is too easy to guess: it is a common one, or has your username in it.",
+        choose_animal: "Choose an animal first.",
+        too_many_registrations: "Too many accounts were created from your address. Try again in an hour.",
+        address_banned: "Your address is banned.",
+        device_banned: "This device is banned.",
+        agree_first: "Tick the box to agree first.",
+        same_name: "That is the name that was rejected.",
+        captcha_required: "Complete the captcha.",
+        captcha_failed: "Captcha failed. Try again.",
+        captcha_unavailable: "Captcha unavailable. Try again later.",
+      };
+      const STATUS_EVERY_MS = 15000;
+      const METRICS_EVERY_MS = 2000;
+      // the game says when it is drawn; if it never does, show it anyway.
+      const LOADING_AT_MOST_MS = 25000;
+      // a game not drawn this long after it started, with the graphics card
+      // in use, is taken for one the card keeps from drawing (main.js
+      // gpuFallback): the client starts again without it.
+      const GPU_WATCH_MS = 60000;
+      let gpuWatch = null;
+
+      let info = null;
+      let session = null; // {server, flashVars, since} while the game is open
+      let webview = null;
+      let chosenAnimal = null;
+      let lastStatus = null; // the server's latest /api/status answer: {ok, there, online, uptimeSeconds, ms, at}
+
+      const setStatus = (text, bad = false, id = "status") => {
+        $(id).textContent = text;
+        $(id).classList.toggle("bad", bad);
+      };
+
+      const fieldValue = id => ($(id).type === "checkbox" ? $(id).checked : $(id).value.trim());
+
+      const saveSettings = () => {
+        // the server is kept only when it is not this copy's own default, so a
+        // new build with another default is not held to an old address
+        const values = Object.fromEntries(SAVED_FIELDS.map(id => [id, fieldValue(id)]));
+        if (serverUrl() === new URL(info.defaultServer).origin) {
+          values.server = "";
+        }
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(values));
+      };
+
+      const loadSettings = () => {
+        let saved = {};
+        try {
+          saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+        }
+        catch (err) {
+        }
+        for (const id of SAVED_FIELDS) {
+          if (saved[id] !== undefined) {
+            $(id)[$(id).type === "checkbox" ? "checked" : "value"] = saved[id];
+          }
+        }
+        $("server").value = $("server").value || info.defaultServer;
+      };
+
+      const serverUrl = () => {
+        const text = fieldValue("server") || info.defaultServer;
+        try {
+          return new URL(/^https?:\/\//.test(text) ? text : `http://${text}`).origin;
+        }
+        catch (err) {
+          return info.defaultServer;
+        }
+      };
+
+      // A password does not go to another machine in the clear unless that
+      // was asked for (a server on the home network, say).
+      const LOOPBACK_HOSTS = ["127.0.0.1", "localhost", "[::1]"];
+      const refuseUnencrypted = server => {
+        const url = new URL(server);
+        if (url.protocol !== "https:" && !LOOPBACK_HOSTS.includes(url.hostname) && !fieldValue("allow-unencrypted")) {
+          throw new Error("Not encrypted. Allow it under Advanced.");
+        }
+      };
+
+      const remembered = () => {
+        try {
+          const saved = JSON.parse(localStorage.getItem(REMEMBERED_KEY));
+          // before there could be several, this was the one account itself.
+          return (Array.isArray(saved) ? saved : saved ? [saved] : []).filter(entry => entry && entry.server && entry.username && entry.token);
+        }
+        catch (err) {
+          return [];
+        }
+      };
+
+      const sameAccount = (entry, server, username) => entry.server === server && entry.username.toLowerCase() === username.toLowerCase();
+      const rememberedFor = (server, username) => remembered().find(entry => sameAccount(entry, server, username)) || null;
+
+      const forget = (server, username) => {
+        localStorage.setItem(REMEMBERED_KEY, JSON.stringify(remembered().filter(entry => !sameAccount(entry, server, username))));
+      };
+
+      const devices = () => {
+        try {
+          const saved = JSON.parse(localStorage.getItem(DEVICES_KEY));
+          return (Array.isArray(saved) ? saved : []).filter(entry => entry && entry.server && entry.username && entry.token);
+        }
+        catch (err) {
+          return [];
+        }
+      };
+      const deviceFor = (server, username) => devices().find(entry => sameAccount(entry, server, username)) || null;
+      const keepDevice = (server, username, token) => {
+        localStorage.setItem(DEVICES_KEY, JSON.stringify([{server, username, token}, ...devices().filter(entry => !sameAccount(entry, server, username))]));
+      };
+      const showCodePart = shown => {
+        $("code-part").hidden = !shown;
+        if (!shown) {
+          $("totp").value = "";
+        }
+      };
+
+      const remember = (server, username, token) => {
+        forget(server, username);
+        localStorage.setItem(REMEMBERED_KEY, JSON.stringify([{server, username, token}, ...remembered()]));
+      };
+
+      const showRemembered = () => {
+        const list = $("saved");
+        list.textContent = "";
+        const here = serverUrl();
+        for (const entry of remembered()) {
+          const row = document.createElement("li");
+          const account = document.createElement("button");
+          account.type = "button";
+          account.className = "account";
+          account.title = `Log in as ${entry.username}`;
+          const name = document.createElement("span");
+          name.className = "name";
+          name.textContent = entry.username;
+          account.append(name);
+          if (entry.server !== here) {
+            const where = document.createElement("span");
+            where.className = "where";
+            try {
+              where.textContent = new URL(entry.server).host;
+            }
+            catch (err) {
+              where.textContent = String(entry.server); // a saved address that is not one
+            }
+            account.append(where);
+          }
+          account.addEventListener("click", () => {
+            $("server").value = entry.server;
+            $("username").value = entry.username;
+            $("password").value = "";
+            $("remember").checked = true;
+            start(() => logIn());
+          });
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "forget";
+          remove.textContent = "×";
+          remove.title = `Forget ${entry.username} on this device`;
+          remove.setAttribute("aria-label", remove.title);
+          remove.addEventListener("click", () => {
+            forget(entry.server, entry.username);
+            showRemembered();
+          });
+          row.append(account, remove);
+          list.append(row);
+        }
+        list.hidden = list.children.length === 0;
+      };
+
+      // what to ask the server for at login; only what was actually changed.
+      const loginChoices = () => {
+        const choices = {};
+        if (fieldValue("account-type") !== "") {
+          choices.accountType = Number(fieldValue("account-type"));
+        }
+        if (fieldValue("guide")) {
+          choices.isGuide = true;
+        }
+        // the server puts the player there when the game asks for its first room.
+        if (fieldValue("start-in-den")) {
+          choices.startInDen = true;
+        }
+        else if (fieldValue("starting-room")) {
+          choices.startRoom = fieldValue("starting-room");
+        }
+        return choices;
+      };
+
+      // servers reachable by strangers ignore these choices unless told
+      // otherwise; member or not, and guide or not, are the player's choice on
+      // a server that says so (membershipChoice), the other account types stay
+      // locked there.
+      const MEMBERSHIP_TYPES = ["", "0", "2"];
+      const showWhetherChoicesApply = flashVars => {
+        const honoured = flashVars.loginChoices !== false;
+        const membership = honoured || flashVars.membershipChoice === true;
+        for (const field of document.querySelectorAll("[data-choice]")) {
+          field.disabled = ["account-type", "guide"].includes(field.id) ? !membership : !honoured;
+        }
+        for (const option of $("account-type").options) {
+          option.disabled = !honoured && !MEMBERSHIP_TYPES.includes(option.value);
+        }
+        if ($("account-type").selectedOptions[0] && $("account-type").selectedOptions[0].disabled) {
+          $("account-type").value = "";
+        }
+        $("choices-hint").hidden = honoured;
+        $("choices-hint").textContent = honoured ? "" : membership ? "Developer is locked by this server." : "Locked by this server.";
+      };
+
+      const getJson = async (url, options) => {
+        let response;
+        try {
+          response = await fetch(url, options);
+        }
+        catch (err) {
+          throw new Error("The server did not answer.");
+        }
+        return {status: response.status, body: await response.json().catch(() => ({}))};
+      };
+
+      const duration = seconds => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor(seconds / 60) % 60;
+        const days = Math.floor(hours / 24);
+        return days > 0 ? `${days} d ${hours % 24} h` : `${hours}:${String(minutes).padStart(2, "0")}:${String(Math.floor(seconds) % 60).padStart(2, "0")}`;
+      };
+
+      const shortDuration = seconds => {
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        return days > 0 ? `${days} d ${hours % 24} h` : hours > 0 ? `${hours} h ${minutes % 60} m` : `${minutes} m`;
+      };
+
+      const playing = count => (count === 1 ? "1 playing" : `${count} playing`);
+
+      const showStats = async () => {
+        if ($("stats").hidden || !session) {
+          return;
+        }
+        const status = lastStatus || {};
+        $("stat-ping").textContent = status.there ? `${status.ms} ms` : "no answer";
+        $("stat-online").textContent = status.ok ? status.online : "–";
+        $("stat-uptime").textContent = status.ok ? duration(status.uptimeSeconds + (Date.now() - status.at) / 1000) : "–";
+        $("stat-session").textContent = duration((Date.now() - session.since) / 1000);
+        const metrics = await window.client.metrics();
+        $("stat-game-cpu").textContent = `${metrics.game.cpu} %`;
+        $("stat-game-memory").textContent = `${metrics.game.memoryMb} MB`;
+        $("stat-rest-memory").textContent = `${metrics.total.memoryMb - metrics.game.memoryMb} MB`;
+        $("stat-memory").textContent = `${metrics.total.memoryMb} MB`;
+        $("stat-processes").textContent = metrics.processes;
+        // what really reached the screen in a second, counted by the window itself.
+        const game = document.querySelector("webview");
+        const painted = game ? await window.client.painted(game.getWebContentsId()) : null;
+        $("stat-painted").textContent = painted === null ? "–" : `${painted} / s`;
+      };
+
+      const checkStatus = async () => {
+        const server = session ? session.server : serverUrl();
+        const answer = await window.client.api(server, "status");
+        if (server !== (session ? session.server : serverUrl())) {
+          return; // the address changed meanwhile
+        }
+        // A server from before /api/status answers 404: there, but it says no more.
+        lastStatus = {...answer.body, ok: answer.status === 200, there: answer.status !== 0, ms: answer.ms, at: Date.now()};
+        const {ok, there, online, ms} = lastStatus;
+        const host = new URL(server).host;
+        // in words, never a coloured light. the numbers only for a server that gives them.
+        $("server-text").textContent = host;
+        // said only when it is not there: an address with numbers under it is up.
+        $("server-badge").hidden = there;
+        $("server-stats").hidden = !ok;
+        if (ok) {
+          $("server-online").textContent = online;
+          $("server-ping").textContent = `${ms} ms`;
+          $("server-uptime").textContent = shortDuration(lastStatus.uptimeSeconds);
+        }
+        $("glance-badge").hidden = there;
+        $("glance-text").textContent = ok ? `${playing(online)} · ${ms} ms` : "";
+        showStats();
+        if (session && ok) {
+          checkBan();
+        }
+      };
+
+      // as a player's card in the game says it; an address is banned for good.
+      const banTitle = seconds => (seconds < 0 ? "Banned"
+        : seconds >= 86400 ? `Banned (${Math.floor(seconds / 86400)}d remaining)`
+          : seconds >= 3600 ? `Banned (${Math.ceil(seconds / 3600)}h remaining)`
+            : `Banned (${Math.max(1, Math.ceil(seconds / 60))}m remaining)`);
+
+      let banServer = null;
+      // the popup of a ban: how long, why, and where to ask about it (and,
+      // when it is for good, where the account can be deleted).
+      // `of`: what is banned: false the account, true its address, "device" this device.
+      const showBan = (server, username, seconds, reason, of = false) => {
+        banServer = server;
+        const left = Number(seconds);
+        $("ban-title").textContent = banTitle(left);
+        $("ban-name").textContent = username;
+        $("ban-address").textContent = of === "device" ? " · this device" : of ? " · your address" : "";
+        $("ban-reason-part").hidden = !reason;
+        $("ban-facts").classList.toggle("bare", !reason);
+        $("ban-until").textContent = left < 0 ? "Permanent"
+          : new Date(Date.now() + left * 1000).toLocaleString([], {dateStyle: "medium", timeStyle: "short"});
+        $("ban-reason").textContent = reason || "";
+        for (const link of document.querySelectorAll(".ban-site")) {
+          link.textContent = `${new URL(server).host}/account`;
+        }
+        $("ban-popup").hidden = false;
+        $("ban-ok").focus();
+      };
+      const hideBan = () => {
+        $("ban-popup").hidden = true;
+      };
+      $("ban-ok").addEventListener("click", hideBan);
+      $("ban-manage").addEventListener("click", () => window.client.openPage(`${banServer}/account`));
+      for (const link of document.querySelectorAll(".ban-site")) {
+        link.addEventListener("click", event => {
+          event.preventDefault();
+          window.client.openPage(`${banServer}/account`);
+        });
+      }
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !$("ban-popup").hidden) {
+          hideBan();
+        }
+      });
+
+      // A rejected username: the sign-in went through, and the server wants
+      // another name before it gives a login. it handed over a ticket for
+      // that; the popup's name goes back with it and finishes the sign-in.
+      let renaming = null; // {ticket, remember, oldName}
+      const askNewName = (ticket, remember, oldName, problem) => {
+        renaming = {ticket, remember, oldName};
+        $("rename-popup").hidden = false;
+        setStatus(problem ? SIGNUP_MESSAGES[problem] || "That name cannot be used." : "", Boolean(problem), "rename-status");
+        $("rename-name").focus();
+      };
+      const closeRename = () => {
+        renaming = null;
+        $("rename-popup").hidden = true;
+        $("rename-name").value = "";
+      };
+
+      // a server with a captcha (its lib/captcha.js) answers a password with
+      // captcha_required; the captcha then opens in a window of its own and
+      // the request goes again with its answer. after a passed captcha the
+      // server may give a pass for the next request (the 2FA code), kept here.
+      let captchaPass = null; // {server, username, pass}
+      const passFor = (server, username) =>
+        (captchaPass && captchaPass.server === server && captchaPass.username === username.toLowerCase() ? captchaPass.pass : undefined);
+
+      // `given`: {username, password, remember, captchaPass} in place of the
+      // form's (a new account); or {rename: {ticket, newName, remember, oldName}} (above).
+      const logIn = async given => {
+        const server = serverUrl();
+        const rename = given && given.rename;
+        const username = rename ? rename.oldName : given ? given.username : $("username").value.trim();
+        const password = rename ? "" : given ? given.password : $("password").value;
+        const wantsRemembering = rename ? rename.remember : given ? given.remember : $("remember").checked;
+        // with "remember me" the password box may stay empty.
+        const saved = password || rename ? null : rememberedFor(server, username);
+        if (!rename && (!username || (!password && !saved))) {
+          throw new Error("Enter username and password.");
+        }
+        refuseUnencrypted(server);
+
+        const flashVars = (await getJson(`${server}/flashvars`)).body;
+        if (!flashVars.clientURL) {
+          throw new Error("Not a private server.");
+        }
+        showWhetherChoicesApply(flashVars);
+
+        const request = rename ? {rename_ticket: rename.ticket, new_username: rename.newName, login_choices: loginChoices()}
+          : saved ? {username, refresh_token: saved.token, login_choices: loginChoices()} : {
+            username, password, domain: "flash", login_choices: loginChoices(),
+            // two-step sign-in: this computer's pass if it has one, and the code once it was asked for.
+            device_token: (deviceFor(server, username) || {}).token,
+            totp: $("code-part").hidden || given ? undefined : $("totp").value.trim(),
+            remember_device: !$("code-part").hidden && $("remember-device").checked,
+            captcha_pass: given ? given.captchaPass : passFor(server, username),
+          };
+        // which computer this is (the client's device.js): the server lets no
+        // sign-in in without it.
+        const device = await window.client.device();
+        const authenticate = body => getJson(`${server}/authenticate`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({...body, device}),
+        });
+        let auth = await authenticate(request);
+        if (auth.body.error === "captcha_required") {
+          const answer = await window.client.captcha(server, "login");
+          if (!answer) {
+            throw new Error(SIGNUP_MESSAGES.captcha_required);
+          }
+          auth = await authenticate({...request, captcha: answer, captcha_pass: undefined});
+        }
+        if (!rename && !saved) {
+          captchaPass = auth.body.captcha_pass ? {server, username: username.toLowerCase(), pass: auth.body.captcha_pass} : null;
+        }
+        if (SIGNUP_MESSAGES[auth.body.error] && /^captcha_/.test(auth.body.error)) {
+          throw new Error(SIGNUP_MESSAGES[auth.body.error]);
+        }
+        if (auth.status === 426 || auth.body.error === "client_outdated") {
+          throw new Error("This server needs a newer Meadow client. Update it from the server's download page.");
+        }
+        if (auth.status === 401 && auth.body.error === "totp_required") {
+          showCodePart(true);
+          $("totp").focus();
+          throw Object.assign(new Error("Enter your 2FA code."), {asking: true});
+        }
+        if (auth.status === 401 && auth.body.error === "totp_wrong") {
+          showCodePart(true);
+          $("totp").focus();
+          throw new Error("Wrong code.");
+        }
+        // banned: for good, or for how much longer. (A saved sign-in is
+        // kept: it is the ban that is in the way, not the sign-in.)
+        // An address is banned for good, whoever signs in from it.
+        // A computer likewise (the server's lib/devices.js).
+        if (auth.status === 401 && ["account_banned", "address_banned", "device_banned"].includes(auth.body.error)) {
+          const of = auth.body.error === "device_banned" ? "device" : auth.body.error === "address_banned";
+          showBan(server, username, of ? -1 : Number(auth.body.banned_seconds), String(auth.body.ban_reason || ""), of);
+          throw new Error("Banned.");
+        }
+        if (auth.status === 401 && auth.body.error === "name_rejected") {
+          askNewName(auth.body.rename_ticket, wantsRemembering, username, auth.body.name_error);
+          throw Object.assign(new Error(""), {asking: true});
+        }
+        if (auth.status === 401 && auth.body.error === "rename_expired") {
+          closeRename();
+          throw new Error("Log in again.");
+        }
+        if (auth.status === 401 && auth.body.error === "account_locked") {
+          throw new Error("This account is locked.");
+        }
+        if (auth.status === 401 && saved) {
+          forget(server, username);
+          showRemembered();
+          throw new Error("Saved login expired. Enter your password.");
+        }
+        if (auth.status === 401) {
+          throw new Error("Wrong username or password.");
+        }
+        if (auth.status === 429) {
+          throw new Error("Too many attempts. Try later.");
+        }
+        if (auth.status !== 200) {
+          throw new Error(`The server refused the login (${auth.status}).`);
+        }
+
+        const player = await getJson(`${server}/player`, {headers: {Authorization: `Bearer ${auth.body.auth_token}`}});
+        if (player.status !== 200) {
+          throw new Error(`The server refused the login (${player.status}).`);
+        }
+        if (auth.body.device_token) {
+          keepDevice(server, player.body.screen_name, auth.body.device_token);
+        }
+        showCodePart(false);
+        if (rename) {
+          forget(server, rename.oldName);
+          closeRename();
+          $("username").value = player.body.screen_name;
+        }
+        if (wantsRemembering) {
+          remember(server, player.body.screen_name, auth.body.refresh_token);
+        }
+        else {
+          forget(server, username);
+        }
+
+        const gamePort = flashVars.smartfoxPort;
+        delete flashVars.loginChoices;
+        delete flashVars.membershipChoice;
+        Object.assign(flashVars, {
+          smartfoxServer: player.body.game_server || flashVars.smartfoxServer,
+          blueboxServer: player.body.game_server || flashVars.blueboxServer,
+          clientPlatform: "electron",
+          clientPlatformVersion: info.launcherVersion,
+          clientOS: info.os,
+          auth_token: auth.body.auth_token,
+          df: "private-client",
+          locale: "en",
+          username: player.body.screen_name,
+          webRefPath: "game/play",
+        });
+        if (fieldValue("starting-room")) {
+          flashVars.startupRoom = fieldValue("starting-room");
+        }
+
+        // the game connects to this computer, on a port this copy relays to
+        // the server (the server's own port when it is on this computer).
+        const localPort = await window.client.useServer(server, gamePort, flashVars.smartfoxServer);
+        if (!localPort) {
+          throw new Error("No free port for the game.");
+        }
+        flashVars.smartfoxPort = String(localPort);
+        return {server, flashVars, since: Date.now()};
+      };
+
+      const reportError = message => {
+        if (session) {
+          fetch(`${session.server}/v1/reportError`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({section: "client", message: String(message).slice(0, 1000)}),
+          }).catch(() => {});
+        }
+      };
+
+      let noteTimer = null;
+      const note = (text, action) => {
+        clearTimeout(noteTimer);
+        $("note").textContent = "";
+        if (action) {
+          const link = document.createElement("a");
+          link.textContent = text;
+          link.addEventListener("click", action);
+          $("note").append("· ", link);
+        }
+        else if (text) {
+          $("note").textContent = `· ${text}`;
+        }
+        noteTimer = setTimeout(() => {
+          $("note").textContent = "";
+        }, 6000);
+      };
+
+      const isMuted = () => $("mute").getAttribute("aria-pressed") === "true";
+      const setMuted = muted => {
+        if (webview) {
+          webview.setAudioMuted(muted);
+        }
+        $("mute").setAttribute("aria-pressed", String(muted));
+        $("mute").textContent = muted ? "Muted" : "Mute";
+      };
+
+      const toggleStats = () => {
+        const open = $("stats").hidden;
+        $("stats").hidden = !open;
+        $("stats-toggle").setAttribute("aria-expanded", String(open));
+        showStats();
+      };
+
+      const takeScreenshot = async () => {
+        if (!webview || !$("loading").hidden) {
+          return;
+        }
+        const file = await window.client.screenshot(webview.getWebContentsId());
+        if (file) {
+          note("Screenshot saved: show it", () => window.client.showFile(file));
+        }
+        else {
+          note("Screenshot failed.");
+        }
+      };
+
+      // the whole room, items and animals, without the HUD: the game draws
+      // it (AJClient.takeRoomPicture) and its page sends it up as
+      // "roomPicture" (game.html), to be saved by main.js
+      let roomPictureAsked = false;
+      const takeRoomPicture = () => {
+        if (!webview || !$("loading").hidden || roomPictureAsked) {
+          return;
+        }
+        roomPictureAsked = true;
+        note("Taking a picture of the room…");
+        webview.send("roomShot");
+        setTimeout(() => roomPictureAsked = false, 30000);
+      };
+      const saveRoomPicture = async picture => {
+        roomPictureAsked = false;
+        if (!picture || typeof picture.image !== "string") {
+          note(picture && picture.error ? String(picture.error) : "Room picture failed.");
+          return;
+        }
+        const file = await window.client.roomPicture(picture.image);
+        if (file) {
+          note("Room picture saved: show it", () => window.client.showFile(file));
+        }
+        else {
+          note("Room picture failed.");
+        }
+      };
+
+      const showTab = name => {
+        for (const tab of ["login", "signup"]) {
+          $(`tab-${tab}`).setAttribute("aria-selected", String(tab === name));
+          $(`${tab}-form`).hidden = tab !== name;
+        }
+      };
+
+      // Discord rich presence (discord.js), while the game is open: the
+      // server's Discord application (flashvars discordAppId), where the
+      // player is and since when they have played.
+      const showPresence = state => {
+        if (!session || !session.flashVars || !session.flashVars.discordAppId) {
+          return;
+        }
+        session.presenceState = state || session.presenceState || "";
+        window.client.presence({appId: session.flashVars.discordAppId, state: session.presenceState,
+          start: session.since || Date.now(), url: session.flashVars.presenceUrl});
+      };
+
+      const closeGame = message => {
+        clearTimeout(gpuWatch);
+        window.client.presence(null);
+        $("fps").textContent = "";
+        if (webview) {
+          webview.remove();
+          webview = null;
+        }
+        theatreBrowser.close();
+        session = null;
+        $("game").hidden = true;
+        $("login").hidden = false;
+        $("password").value = "";
+        $("log-in").disabled = false;
+        $("sign-up").disabled = false;
+        setStatus(message || "", Boolean(message));
+        showTab("login");
+        showRemembered();
+        checkStatus();
+        $("username").focus();
+      };
+
+      // banned while playing: the game says so in its own words and stops.
+      // the server is asked (with this session's login token, which says
+      // who asks) and the game makes way for the popup. asked when the game
+      // says it is done, and with every look at the server's state, since a
+      // game that was put out may sit on its own message.
+      let askingAboutBan = false;
+      const checkBan = async (ended = session) => {
+        if (!ended || askingAboutBan) {
+          return;
+        }
+        askingAboutBan = true;
+        const answer = await window.client.api(ended.server, "ban", {token: ended.flashVars.auth_token});
+        askingAboutBan = false;
+        if (answer.status === 200 && answer.body.banned && (session === ended || !session)) {
+          if (session) {
+            closeGame();
+          }
+          showBan(ended.server, ended.flashVars.username, Number(answer.body.banned_seconds), String(answer.body.ban_reason || ""),
+            answer.body.banned === "device" ? "device" : answer.body.banned === "address");
+        }
+      };
+
+      let loadingTimer = null;
+      const gameIsDrawn = () => {
+        clearTimeout(loadingTimer);
+        $("loading").hidden = true;
+        // A game just started has its HUD, whatever the last one was told.
+        $("hud").setAttribute("aria-pressed", "false");
+        $("hud").textContent = "HUD";
+      };
+
+      // the theatre's browser (experimental; the server's admin turns it on
+      // for its game page): the game page (the server's game.html) says where the
+      // theatre screen is and what to show, and a webview of its own is laid
+      // over it here, in a session that keeps nothing (main.js). nothing of
+      // it goes to the server, and it sees nothing of the game.
+      const theatreBrowser = (() => {
+        let view = null;
+        let ready = false; // a webview answers nothing before its first dom-ready
+        const webAddress = text => {
+          try {
+            const url = new URL(String(text));
+            return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+          }
+          catch (err) {
+            return null;
+          }
+        };
+        const tell = () => {
+          if (view && ready && webview) {
+            let url = "";
+            try {
+              url = view.getURL();
+            }
+            catch (err) {
+              // not attached yet
+            }
+            webview.send("browserState", {url, back: view.canGoBack(), forward: view.canGoForward(), loading: view.isLoading()});
+          }
+        };
+        const close = () => {
+          if (view) {
+            view.remove();
+            view = null;
+            ready = false;
+          }
+        };
+        const open = url => {
+          if (view && ready) {
+            view.loadURL(url);
+            return;
+          }
+          if (view) {
+            view.src = url;
+            return;
+          }
+          view = document.createElement("webview");
+          view.id = "theatre-browser-view";
+          view.setAttribute("partition", "aj-browser");
+          view.src = url;
+          view.style.visibility = "hidden";
+          view.addEventListener("dom-ready", () => {
+            ready = true;
+            tell();
+          });
+          for (const name of ["did-navigate", "did-navigate-in-page", "did-start-loading", "did-stop-loading", "did-fail-load"]) {
+            view.addEventListener(name, tell);
+          }
+          $("stage").append(view);
+        };
+        // where: {x, y, w, h} in the game page's pixels, `clip` its CSS
+        // clip-path (what the game draws over it cut out), `shown`.
+        const place = where => {
+          if (!view || !webview || !where) {
+            return;
+          }
+          const game = webview.getBoundingClientRect();
+          const stage = $("stage").getBoundingClientRect();
+          const number = value => (Number.isFinite(Number(value)) ? Number(value) : 0);
+          view.style.left = `${game.left - stage.left + number(where.x)}px`;
+          view.style.top = `${game.top - stage.top + number(where.y)}px`;
+          view.style.width = `${Math.max(0, number(where.w))}px`;
+          view.style.height = `${Math.max(0, number(where.h))}px`;
+          view.style.clipPath = typeof where.clip === "string" && /^(?:none|polygon\(evenodd,[0-9a-z%.,\s]*\))$/.test(where.clip) ? where.clip : "none";
+          view.style.visibility = where.shown === true ? "visible" : "hidden";
+        };
+        return {
+          close,
+          // one message from the game page: {action, url?, where?}
+          handle(message) {
+            if (!message || typeof message !== "object") {
+              return;
+            }
+            const url = webAddress(message.url);
+            if (message.action === "go" && url) {
+              open(url);
+            }
+            else if (message.action === "close") {
+              close();
+            }
+            else if (view && ready && message.action === "back" && view.canGoBack()) {
+              view.goBack();
+            }
+            else if (view && ready && message.action === "forward" && view.canGoForward()) {
+              view.goForward();
+            }
+            else if (view && ready && message.action === "reload") {
+              view.reload();
+            }
+            place(message.where);
+            tell();
+          },
+        };
+      })();
+
+      const openGame = () => {
+        // A reload keeps the sound as it was; a login starts as the setting says.
+        const muted = webview ? isMuted() : fieldValue("start-muted");
+        if (webview) {
+          webview.remove();
+        }
+        theatreBrowser.close();
+        // A fresh webview each time: the page and the plugin start clean.
+        webview = document.createElement("webview");
+        webview.setAttribute("plugins", "");
+        webview.setAttribute("preload", "gamePreload.js");
+        webview.src = `${session.server}/gameClient/game/index.html`;
+        webview.addEventListener("dom-ready", () => {
+          setMuted(muted);
+          webview.send("flashVarsReady", session.flashVars);
+          // this client can show the theatre's browser; the server says whether it is offered
+          webview.send("browserSupported", true);
+        }, {once: true});
+        webview.addEventListener("did-fail-load", event => {
+          if (event.isMainFrame) {
+            closeGame("The game page did not load.");
+          }
+        });
+        webview.addEventListener("ipc-message", event => {
+          if (event.channel === "fps") {
+            $("fps").textContent = `· ${Number(event.args[0]) || 0} fps`;
+          }
+          if (event.channel === "initialized") {
+            clearTimeout(gpuWatch);
+            gameIsDrawn();
+          }
+          else if (event.channel === "reloadGame") {
+            // the game asks for this when it wants a restart (true) or is done.
+            if (event.args[0]) {
+              openGame();
+            }
+            else {
+              const ended = session;
+              closeGame();
+              checkBan(ended);
+            }
+          }
+          else if (event.channel === "reportError") {
+            reportError(event.args[0]);
+          }
+          else if (event.channel === "roomPicture") {
+            saveRoomPicture(event.args[0]);
+          }
+          else if (event.channel === "pickColour") {
+            // the colour panel's dropper: the screens to pick from (main.js), the answer back to the game
+            console.warn("[colour] the game asks for a colour from the screen");
+            window.client.pickColour().then(colour => webview.send("pickedColour", colour), err => {
+              console.warn(`[colour] the pick failed: ${err && err.message}`);
+              webview.send("pickedColour", "");
+            });
+          }
+          else if (event.channel === "printImage") {
+            // the game's print kits and art studios (game.html ajPrint)
+            window.client.printImage(event.args[0]);
+          }
+          else if (event.channel === "openPage") {
+            // main.js opens http and https addresses only
+            window.client.openPage(String(event.args[0]));
+          }
+          else if (event.channel === "browser") {
+            // not inside this handler: Electron 11 takes the whole window
+            // down when a webview is made while another's message is handled.
+            const message = event.args[0];
+            setTimeout(() => theatreBrowser.handle(message), 0);
+          }
+          else if (event.channel === "ownVideo") {
+            // the player's own theatre video (the game page's link box): main.js
+            // lets that one address load, then the page plays it.
+            const link = String(event.args[0] || "");
+            window.client.ownVideo(link).then(() => webview.send("ownVideoReady", link));
+          }
+          else if (event.channel === "presence") {
+            // where the player is now (the game's AJClient.presenceRoom)
+            showPresence(String(event.args[0] || ""));
+          }
+        });
+        $("loading").hidden = false;
+        clearTimeout(loadingTimer);
+        loadingTimer = setTimeout(gameIsDrawn, LOADING_AT_MOST_MS);
+        clearTimeout(gpuWatch);
+        if (info && info.gpu) {
+          gpuWatch = setTimeout(() => {
+            closeGame("The game did not start with the graphics card. Meadow is restarting without it (Use GPU, under Advanced, turns it back on).");
+            setTimeout(() => window.client.gpuFallback(), 4000);
+          }, GPU_WATCH_MS);
+        }
+        $("stage").prepend(webview);
+        $("who").textContent = `${session.flashVars.username} · ${new URL(session.server).host}`;
+        $("stats-tip").textContent = fieldValue("account-type") === "4"
+          ? "F2 frame counter · F6 quality"
+          : "F7 mute · F10 screenshot · F11 fullscreen";
+        $("login").hidden = true;
+        $("game").hidden = false;
+        checkStatus();
+      };
+
+      const start = async (login, statusId = "status") => {
+        $("log-in").disabled = true;
+        $("sign-up").disabled = true;
+        setStatus("Logging in…", false, statusId);
+        saveSettings();
+        try {
+          session = await login();
+          setStatus("", false, statusId);
+          openGame();
+          showPresence("");
+        }
+        catch (err) {
+          $("log-in").disabled = false;
+          $("sign-up").disabled = false;
+          setStatus(err.message, !err.asking, statusId);
+        }
+      };
+
+      $("rename-box").addEventListener("submit", event => {
+        event.preventDefault();
+        const newName = $("rename-name").value.trim();
+        if (renaming && newName) {
+          start(() => logIn({rename: {...renaming, newName}}));
+        }
+      });
+      $("rename-cancel").addEventListener("click", () => {
+        closeRename();
+        setStatus("");
+      });
+
+      // "Sign in with the Meadow client" on the server's account page (its
+      // lib/manage.js; the link comes through main.js): the account played
+      // now, or one remembered here, gets a ticket from the server that
+      // opens the page signed in, in the browser that asked. the browser
+      // already asked whether to open Burrow, so with one account there is
+      // nothing more to ask.
+      const tellAccountPage = (text, bad) => (session ? note(text) : setStatus(text, bad));
+      const pickAccount = choices => new Promise(resolve => {
+        const list = $("link-accounts");
+        list.textContent = "";
+        const done = choice => {
+          $("link-popup").hidden = true;
+          $("link-cancel").onclick = null;
+          resolve(choice);
+        };
+        for (const choice of choices) {
+          const row = document.createElement("li");
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "account";
+          const name = document.createElement("span");
+          name.className = "name";
+          name.textContent = choice.username;
+          button.append(name);
+          button.addEventListener("click", () => done(choice));
+          row.append(button);
+          list.append(row);
+        }
+        $("link-cancel").onclick = () => done(null);
+        $("link-popup").hidden = false;
+        list.querySelector("button").focus();
+      });
+      window.client.onAccountLink(async nonce => {
+        if (!$("link-popup").hidden) {
+          return;
+        }
+        const choices = session
+          ? [{server: session.server, username: session.flashVars.username, token: session.flashVars.auth_token}]
+          : remembered().filter(entry => entry.server === serverUrl());
+        if (choices.length === 0) {
+          tellAccountPage("Log in here first, then try the account page again.", true);
+          return;
+        }
+        const choice = choices.length === 1 ? choices[0] : await pickAccount(choices);
+        if (!choice) {
+          return;
+        }
+        const answer = await window.client.api(choice.server, "accountTicket", {token: choice.token, nonce});
+        if (answer.status !== 200 || !/^https?:\/\//.test(String(answer.body.url))) {
+          tellAccountPage(answer.body.error || "The account page could not be signed in.", true);
+          return;
+        }
+        window.client.openPage(answer.body.url);
+        tellAccountPage(`Account page signed in as ${answer.body.username}.`, false);
+      });
+
+      // another name is another account: its code is not this one's.
+      $("username").addEventListener("input", () => showCodePart(false));
+
+      $("login-form").addEventListener("submit", event => {
+        event.preventDefault();
+        start(() => logIn());
+      });
+
+      const showSignupStep = name => {
+        $("step-animal").hidden = name !== "animal";
+        $("step-account").hidden = name !== "account";
+        setStatus("", false, "signup-status");
+      };
+
+      const chooseAnimal = animal => {
+        chosenAnimal = animal;
+        for (const button of $("animals").children) {
+          const picked = button.dataset.id === String(animal[0]);
+          button.setAttribute("aria-checked", String(picked));
+          button.tabIndex = picked ? 0 : -1;
+        }
+        $("signup-next").disabled = false;
+      };
+
+      const showAnimals = () => {
+        const server = serverUrl();
+        $("animals").textContent = "";
+        ANIMALS.forEach((animal, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.dataset.id = animal[0];
+          button.setAttribute("role", "radio");
+          button.setAttribute("aria-checked", String(chosenAnimal === animal));
+          button.tabIndex = (chosenAnimal ? chosenAnimal === animal : index === 0) ? 0 : -1;
+          const picture = document.createElement("img");
+          picture.src = `${server}/signup/thumb_${animal[1]}.svg`;
+          picture.alt = "";
+          // A server that is not answering has no pictures to give: names alone then.
+          picture.addEventListener("error", () => {
+            picture.hidden = true;
+          });
+          const name = document.createElement("span");
+          name.textContent = animal[2];
+          button.append(picture, name);
+          button.addEventListener("click", () => chooseAnimal(animal));
+          $("animals").append(button);
+        });
+      };
+
+      // arrow keys move through the animals, as in any group of radio buttons.
+      $("animals").addEventListener("keydown", event => {
+        const step = {ArrowRight: 1, ArrowDown: 3, ArrowLeft: -1, ArrowUp: -3}[event.key];
+        const buttons = [...$("animals").children];
+        const at = buttons.indexOf(document.activeElement);
+        if (step === undefined || at === -1) {
+          return;
+        }
+        event.preventDefault();
+        const to = (at + step + buttons.length) % buttons.length;
+        buttons[to].focus();
+        chooseAnimal(ANIMALS[to]);
+      });
+
+      $("tab-login").addEventListener("click", () => showTab("login"));
+      $("tab-signup").addEventListener("click", () => {
+        showAnimals();
+        showTab("signup");
+      });
+      $("signup-next").addEventListener("click", () => {
+        $("picked-art").hidden = false;
+        $("picked-art").src = `${serverUrl()}/signup/thumb_${chosenAnimal[1]}.svg`;
+        $("picked-name").textContent = `Starting as a ${chosenAnimal[2].toLowerCase()}`;
+        showSignupStep("account");
+        $("new-username").focus();
+      });
+      $("signup-back").addEventListener("click", () => showSignupStep("animal"));
+      $("picked-art").addEventListener("error", () => {
+        $("picked-art").hidden = true;
+      });
+
+      $("signup-form").addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!chosenAnimal || $("step-account").hidden) {
+          return;
+        }
+        const username = $("new-username").value.trim();
+        const password = $("new-password").value;
+        if (password !== $("new-confirm").value) {
+          setStatus("Passwords differ.", true, "signup-status");
+          return;
+        }
+        if (!$("new-agreed").checked) {
+          setStatus(SIGNUP_MESSAGES.agree_first, true, "signup-status");
+          return;
+        }
+        try {
+          refuseUnencrypted(serverUrl());
+        }
+        catch (err) {
+          setStatus(err.message, true, "signup-status");
+          return;
+        }
+        $("sign-up").disabled = true;
+        setStatus("Creating the account…", false, "signup-status");
+        const form = {username, password, avatarType: chosenAnimal[0], agreed: true};
+        let answer = await window.client.api(serverUrl(), "register", form);
+        // a server with a captcha asks for one (see logIn)
+        if (answer.body.error === "captcha_required") {
+          const captcha = await window.client.captcha(serverUrl(), "signup");
+          answer = captcha ? await window.client.api(serverUrl(), "register", {...form, captcha}) : answer;
+        }
+        if (answer.status !== 200) {
+          $("sign-up").disabled = false;
+          setStatus(answer.status === 0 ? "The server did not answer." : SIGNUP_MESSAGES[answer.body.error] || "Could not create the account.", true, "signup-status");
+          return;
+        }
+        const keep = $("new-remember").checked;
+        $("new-agreed").checked = false;
+        $("new-password").value = "";
+        $("new-confirm").value = "";
+        $("username").value = answer.body.username;
+        $("remember").checked = keep;
+        await start(() => logIn({username: answer.body.username, password, remember: keep, captchaPass: answer.body.captcha_pass}), "signup-status");
+        if (session) {
+          $("new-username").value = "";
+          showSignupStep("animal");
+        }
+      });
+
+      $("log-out").addEventListener("click", () => closeGame());
+      $("reload").addEventListener("click", () => {
+        if (session) {
+          openGame();
+        }
+      });
+      $("mute").addEventListener("click", () => setMuted(!isMuted()));
+
+      const setHudHidden = hidden => {
+        $("hud").setAttribute("aria-pressed", String(hidden));
+        $("hud").textContent = hidden ? "HUD off" : "HUD";
+        if (webview) {
+          webview.send("hud", !hidden);
+        }
+      };
+      $("hud").addEventListener("click", () => setHudHidden($("hud").getAttribute("aria-pressed") !== "true"));
+      $("screenshot").addEventListener("click", takeScreenshot);
+      $("room-picture").addEventListener("click", takeRoomPicture);
+      $("stats-toggle").addEventListener("click", toggleStats);
+      $("fullscreen").addEventListener("click", () => window.client.toggleFullscreen());
+      const opensPage = (id, page) => $(id).addEventListener("click", event => {
+        event.preventDefault();
+        window.client.openPage(`${session ? session.server : serverUrl()}/${page}`);
+      });
+      opensPage("manage-account", "account");
+      opensPage("account", "account");
+      opensPage("commands-login", "commands");
+      opensPage("terms-login", "terms");
+      opensPage("privacy-login", "privacy");
+      opensPage("terms-signup", "terms");
+      opensPage("privacy-signup", "privacy");
+      window.client.onFullscreen(on => document.body.classList.toggle("fullscreen", on));
+      window.client.onShortcut(key => {
+        if (!session) {
+          return;
+        }
+        if (key === "F7") {
+          setMuted(!isMuted());
+        }
+        else if (key === "F10") {
+          takeScreenshot();
+        }
+      });
+      for (const id of SAVED_FIELDS) {
+        $(id).addEventListener("change", saveSettings);
+      }
+
+      // the chosen server: who is remembered there, whether it answers, and
+      // whether it honours the advanced settings.
+      const checkServer = async () => {
+        showRemembered();
+        checkStatus();
+        if (!$("signup-form").hidden) {
+          showAnimals();
+        }
+        try {
+          showWhetherChoicesApply((await getJson(`${serverUrl()}/flashvars`)).body);
+        }
+        catch (err) {
+        }
+      };
+      $("server").addEventListener("change", checkServer);
+      // Chromium decides about the graphics card as it starts.
+      $("use-gpu").addEventListener("change", async () => {
+        await window.client.setGpu($("use-gpu").checked);
+        $("gpu-hint").hidden = $("use-gpu").checked === info.gpu;
+      });
+
+      // updates (the client's updater.js): one fetched waits for a restart,
+      // and one that needs a new install is a download from the server's site.
+      // shown on the login card, and on the game's bar for those playing.
+      let update = null;
+      const showUpdate = state => {
+        update = state;
+        $("update-line").hidden = !state;
+        $("bar-update").hidden = !state;
+        if (state) {
+          $("update-button").textContent = state.state === "ready" ? `Update ${state.version} ready · Restart` : `Meadow ${state.version} · Download`;
+          $("bar-update").textContent = state.state === "ready" ? `Update ${state.version} · Restart` : `Meadow ${state.version} · Download`;
+        }
+      };
+      window.client.onUpdate(showUpdate);
+      const takeUpdate = () => {
+        if (update && update.state === "ready") {
+          window.client.restartToUpdate();
+        }
+        else if (update) {
+          window.client.openPage(`${info.defaultServer}/`);
+        }
+      };
+      $("update-button").addEventListener("click", takeUpdate);
+      $("bar-update").addEventListener("click", () => {
+        if (!update || update.state !== "ready" || window.confirm("Restart Meadow now to update? This leaves the game.")) {
+          takeUpdate();
+        }
+      });
+      $("auto-update").addEventListener("change", () => window.client.setAutoUpdate($("auto-update").checked));
+      $("show-log").addEventListener("click", () => window.client.showLog());
+
+      window.client.info().then(result => {
+        info = result;
+        loadSettings();
+        $("use-gpu").checked = info.gpuSetting;
+        $("version-hint").textContent = `Version ${info.version}`;
+        $("auto-update-part").hidden = info.autoUpdate === null;
+        $("auto-update").checked = info.autoUpdate === true;
+        if (info.update) {
+          showUpdate(info.update);
+        }
+        const [latest] = remembered().filter(entry => entry.server === serverUrl());
+        if (latest) {
+          $("username").value = latest.username;
+          $("remember").checked = true;
+        }
+        checkServer();
+        // the first answer includes making the connection; the second is the ping.
+        setTimeout(checkStatus, 1200);
+        setInterval(checkStatus, STATUS_EVERY_MS);
+        setInterval(showStats, METRICS_EVERY_MS);
+        if (!info.flashPluginFound) {
+          setStatus("Flash plugin not found.", true);
+        }
+      });
+    </script>
+  </body>
+</html>

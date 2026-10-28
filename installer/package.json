@@ -1,0 +1,8 @@
+{
+  "name": "burrow-installers",
+  "private": true,
+  "description": "builds the installers; not part of the client",
+  "devDependencies": {
+    "electron-builder": "26.16.1"
+  }
+}

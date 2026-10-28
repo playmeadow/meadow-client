@@ -1,0 +1,8 @@
+{
+    "name": "aj-private-client",
+    "productName": "Meadow",
+    "version": "1.1.0",
+    "description": "Meadow, an experimental fork of the Burrow client",
+    "main": "boot.js",
+    "license": "UNLICENSED"
+}
